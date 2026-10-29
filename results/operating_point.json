@@ -1,0 +1,9 @@
+{
+  "model": "Logistic (all 11)",
+  "cost_ratio": 3,
+  "threshold": 0.24,
+  "theoretical_threshold": 0.25,
+  "cv_sensitivity": 0.7393939393939394,
+  "cv_specificity": 0.7687400318979266,
+  "cv_cost_per_wine": 0.34595959595959597
+}
