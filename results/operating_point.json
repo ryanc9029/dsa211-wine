@@ -1,9 +1,23 @@
 {
-  "model": "Logistic (all 11)",
+  "model": "Logistic",
   "cost_ratio": 3,
   "threshold": 0.24,
   "theoretical_threshold": 0.25,
-  "cv_sensitivity": 0.7393939393939394,
-  "cv_specificity": 0.7687400318979266,
-  "cv_cost_per_wine": 0.34595959595959597
+  "threshold_bootstrap_95ci": [
+    0.21,
+    0.29
+  ],
+  "cv_share_good": 0.21599592460519612,
+  "cv_sensitivity": 0.7323113207547169,
+  "cv_specificity": 0.7394411955815464,
+  "cv_precision": 0.4364019676739283,
+  "cv_cost_per_wine": 0.37773815588385123,
+  "cv_cost_taste_none": 0.6479877738155884,
+  "cv_cost_taste_all": 0.7840040753948039,
+  "cv_saving_abs": 0.27024961793173713,
+  "cv_saving_pct": 41.70597484276729,
+  "break_even_cost_ratio": [
+    1.2914653784219001,
+    10.026431718061675
+  ]
 }
