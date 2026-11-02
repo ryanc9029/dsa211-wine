@@ -6,19 +6,26 @@ cost assumptions are defined once.
 
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import GridSearchCV, StratifiedKFold
+from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+from sklearn.preprocessing import StandardScaler
 
-SEED = 2026
+# Same seed as the train/test split in wine_white_data_split.ipynb.
+SEED = 211
 
 FEATURES = [
     'fixed acidity', 'volatile acidity', 'citric acid', 'residual sugar',
     'chlorides', 'free sulfur dioxide', 'total sulfur dioxide', 'density',
     'pH', 'sulphates', 'alcohol'
 ]
+COLUMNS = FEATURES + ['quality']
+
+RAW_PATH = 'datasets/winequality-white.csv'
+TRAIN_PATH = 'datasets/winequality-white-train.csv'
+TEST_PATH = 'datasets/winequality-white-test.csv'
+N_TRAIN_WINES, N_TEST_WINES = 3168, 793
+N_TRAIN_ROWS, N_TEST_ROWS = 3926, 972
 
 # Right-skewed predictors that get a natural log (chosen in EDA.ipynb on the
 # training set: raw skew > 0.75 and the log reduces |skew|). A log learns
@@ -32,13 +39,53 @@ C_FP = 1
 C_FN_BASE = 3
 COST_RATIOS = [1/3, 1/2, 1, 2, 3, 5, 10]   # c_FN / c_FP
 
-MIN_PREDICTORS = 5
+
+def _attach_duplicates(split):
+    """Raw rows (duplicates included) belonging to one split, with wine_id.
+
+    The split CSVs hold one row per unique wine. Each unique wine gets a
+    wine_id (train 0..3167, test 3168..3960), then the raw file is merged
+    back on all 12 columns so every repeat measurement of a wine carries
+    that wine's id. Only the CSV of the requested split is read.
+    """
+    raw = pd.read_csv(RAW_PATH, sep=';')
+    # Repeat rows must be exact copies: matching on the 11 features alone
+    # gives the same duplicates as matching on all 12 columns, so no wine
+    # has conflicting quality scores.
+    assert raw.duplicated(subset=FEATURES).sum() == raw.duplicated().sum()
+
+    path, first_id, n_rows = {'train': (TRAIN_PATH, 0, N_TRAIN_ROWS),
+                              'test': (TEST_PATH, N_TRAIN_WINES, N_TEST_ROWS)}[split]
+    wines = pd.read_csv(path)
+    wines['wine_id'] = first_id + np.arange(len(wines))
+    df = raw.merge(wines, on=COLUMNS, how='inner', validate='many_to_one')
+    assert len(df) == n_rows
+    return df.assign(split=split)
 
 
-def load_train(path='datasets/winequality-white-train.csv'):
-    """Return (X, y) for the training set with y = 1 if quality >= 7."""
-    df = pd.read_csv(path)
-    return transform(df[FEATURES]), (df['quality'] >= 7).astype(int)
+def load_all():
+    """All 4,898 raw rows with wine_id and split, for the final refit only."""
+    df = pd.concat([_attach_duplicates('train'), _attach_duplicates('test')],
+                   ignore_index=True)
+    assert len(df) == len(pd.read_csv(RAW_PATH, sep=';')), 'unmatched raw rows'
+    assert df['wine_id'].nunique() == N_TRAIN_WINES + N_TEST_WINES
+    return df
+
+
+def _split_xyg(df):
+    df = df.reset_index(drop=True)
+    return (transform(df[FEATURES]), (df['quality'] >= 7).astype(int),
+            df['wine_id'])
+
+
+def load_train():
+    """Return (X, y, groups) for the training set, y = 1 if quality >= 7."""
+    return _split_xyg(_attach_duplicates('train'))
+
+
+def load_test():
+    """Return (X, y, groups) for the test set. Load it once, in notebook 05."""
+    return _split_xyg(_attach_duplicates('test'))
 
 
 def transform(X):
@@ -50,7 +97,11 @@ def transform(X):
 
 
 def make_cv(k=10):
-    return StratifiedKFold(n_splits=k, shuffle=True, random_state=SEED)
+    """Stratified folds that keep every copy of a wine in the same fold.
+
+    Always call cv.split(X, y, groups) with the wine_id groups.
+    """
+    return StratifiedGroupKFold(n_splits=k, shuffle=True, random_state=SEED)
 
 
 def expected_cost(y_true, prob, threshold, c_fn, c_fp=C_FP):
@@ -62,85 +113,10 @@ def expected_cost(y_true, prob, threshold, c_fn, c_fp=C_FP):
     return (c_fp * fp + c_fn * fn) / len(y_true)
 
 
-def lasso_pipeline(degree, C):
-    return Pipeline([
-        ('poly', PolynomialFeatures(degree=degree, include_bias=False)),
-        ('scaler', StandardScaler()),
-        ('model', LogisticRegression(l1_ratio=1, C=C, solver='liblinear',
-                                     max_iter=5000)),
-    ])
-
-
-def predictors_used(pipe, feature_names):
-    """Original predictors with at least one nonzero term in a fitted lasso."""
-    poly = pipe.named_steps['poly']
-    coef = pipe.named_steps['model'].coef_.ravel()
-    powers = poly.powers_[coef != 0]
-    return [f for j, f in enumerate(feature_names) if powers[:, j].any()]
-
-
-class OneSELassoLogit(BaseEstimator, ClassifierMixin):
-    """L1 logistic regression whose degree and C are chosen by inner CV.
-
-    Selection rule (fixed before looking at results):
-      1. Grid over degree x C, scored by PR-AUC with stratified inner CV.
-      2. One-SE rule: keep candidates within one SE of the best mean.
-         Prefer degree 1 over degree 2, then the smallest C (strongest
-         penalty, fewest terms).
-      3. If the chosen model uses fewer than MIN_PREDICTORS of the original
-         predictors, step to the next larger C at the same degree until it
-         uses at least MIN_PREDICTORS.
-
-    Wrapping the whole procedure as one estimator lets the outer CV score
-    the tuning procedure itself (nested CV), so its score is comparable with
-    the untuned models.
-    """
-
-    def __init__(self, degrees=(1, 2), Cs=tuple(np.logspace(-3, 1, 13)),
-                 inner_k=5):
-        self.degrees = degrees
-        self.Cs = Cs
-        self.inner_k = inner_k
-
-    def fit(self, X, y):
-        grid = GridSearchCV(
-            lasso_pipeline(1, 1.0),
-            {'poly__degree': list(self.degrees), 'model__C': list(self.Cs)},
-            scoring='average_precision', cv=make_cv(self.inner_k),
-            refit=False, n_jobs=-1,
-        )
-        grid.fit(X, y)
-        res = pd.DataFrame({
-            'degree': grid.cv_results_['param_poly__degree'].astype(int),
-            'C': grid.cv_results_['param_model__C'].astype(float),
-            'mean': grid.cv_results_['mean_test_score'],
-            'se': grid.cv_results_['std_test_score'] / np.sqrt(self.inner_k),
-        })
-        best = res.loc[res['mean'].idxmax()]
-        ok = res[res['mean'] >= best['mean'] - best['se']]
-        pick = ok.sort_values(['degree', 'C']).iloc[0]
-
-        names = list(X.columns)
-        Cs = sorted(res.loc[res['degree'] == pick['degree'], 'C'])
-        for C in Cs[Cs.index(pick['C']):]:
-            pipe = lasso_pipeline(int(pick['degree']), C).fit(X, y)
-            used = predictors_used(pipe, names)
-            if len(used) >= MIN_PREDICTORS:
-                break
-
-        self.cv_results_ = res
-        self.one_se_pick_ = (int(pick['degree']), float(pick['C']))
-        self.degree_, self.C_ = int(pick['degree']), float(C)
-        self.predictors_used_ = used
-        self.pipeline_ = pipe
-        self.classes_ = pipe.classes_
-        return self
-
-    def predict_proba(self, X):
-        return self.pipeline_.predict_proba(X)
-
-    def predict(self, X):
-        return self.pipeline_.predict(X)
+def no_model_costs(share_good, c_fn, c_fp=C_FP):
+    """Cost per wine of the two policies that use no model."""
+    return {'taste none': c_fn * share_good,
+            'taste all': c_fp * (1 - share_good)}
 
 
 def candidate_models():
@@ -148,11 +124,10 @@ def candidate_models():
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
     from sklearn.naive_bayes import GaussianNB
     return {
-        'Logistic (all 11)': Pipeline([
+        'Logistic': Pipeline([
             ('scaler', StandardScaler()),
             ('model', LogisticRegression(C=np.inf, max_iter=5000)),
         ]),
-        'L1 logistic (CV-tuned)': OneSELassoLogit(),
         'LDA': Pipeline([
             ('scaler', StandardScaler()),
             ('model', LinearDiscriminantAnalysis()),
@@ -166,6 +141,4 @@ def candidate_models():
 
 def build_selected(spec):
     """Rebuild the frozen specification saved by 03_model_comparison.ipynb."""
-    if spec['name'] == 'L1 logistic (CV-tuned)':
-        return lasso_pipeline(spec['degree'], spec['C'])
     return candidate_models()[spec['name']]
