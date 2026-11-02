@@ -1,7 +1,8 @@
 {
-  "name": "Logistic (all 11)",
-  "cv_pr_auc_mean": 0.5537799042779806,
-  "cv_pr_auc_se": 0.024149965517530736,
-  "cv_roc_auc_mean": 0.8189351201255584,
-  "cv_roc_auc_se": 0.010283168728452348
+  "name": "Logistic",
+  "cv_pr_auc_mean": 0.5261542653616742,
+  "cv_pr_auc_se": 0.01719729881199799,
+  "cv_roc_auc_mean": 0.7896846929473595,
+  "cv_roc_auc_se": 0.013058613607441481,
+  "cv": "StratifiedGroupKFold(n_splits=10, shuffle=True, random_state=211), groups=wine_id"
 }
