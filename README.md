@@ -34,6 +34,14 @@ The white file has 937 exact duplicate rows (772 wines recorded 2-8 times). Copi
 2. `wine_utils.load_train()` / `load_test()` give each unique wine a `wine_id` and merge the raw file back on all 12 columns, re-attaching the duplicates (train 3,926 rows, test 972 rows). Each returns `(X, y, groups)`.
 3. All CV uses `StratifiedGroupKFold(n_splits=10, shuffle=True, random_state=211)` with `groups = wine_id`, so every copy of a wine stays in one fold. Notebook 03 asserts that no `wine_id` appears on both sides of any fold.
 
+## Checks on the design decisions
+
+The last section of `03_model_comparison.ipynb` re-runs CV with one decision changed at a time, after the winner is saved, and ends with a table of every decision, its reason and where the evidence is.
+
+- **Grouped vs ordinary folds:** ordinary folds put copies of about a third of validation wines in training, but PR-AUC changes by at most 0.006, so the conclusions do not depend on it. Grouping is kept because it is the correct design.
+- **Log vs raw predictors:** the logs help Gaussian NB (+0.011 ± 0.006) and are neutral for logistic regression and LDA. They were chosen for distribution shape, not performance.
+- **All 11 predictors vs best subset:** AIC keeps 10 (no change in PR-AUC); BIC, run inside each fold, keeps 6-8 and lowers PR-AUC by 0.017 ± 0.006. All 11 are kept.
+
 ## Reproducing the results
 
 ```bash
