@@ -1,0 +1,12 @@
+,Logistic: folds kept (of 10),Logistic: final,LDA: folds kept (of 10),LDA: final,Gaussian NB: folds kept (of 10),Gaussian NB: final
+fixed acidity,10,✓,9,✓,0,
+log volatile acidity,0,,0,,0,
+citric acid,0,,0,,9,✓
+log residual sugar,10,✓,9,✓,0,
+log chlorides,1,,5,,6,
+free sulfur dioxide,8,✓,8,✓,0,
+total sulfur dioxide,0,,0,,0,
+density,10,✓,9,✓,0,
+pH,10,✓,10,✓,8,✓
+log sulphates,5,✓,4,✓,1,
+alcohol,0,,1,,10,✓
