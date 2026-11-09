@@ -6,7 +6,7 @@ DSA211 Statistical Learning (SMU), Topic 2: Classification System Evaluation.
 
 **Can physicochemical properties identify high-quality white Vinho Verde wine?**
 
-A wine is *good* if its expert quality score is 7 or above. The application is a producer pre-screening batches before paying for an expert tasting panel: a false positive wastes one tasting ($c_{FP} = 1$), and a false negative sells a good wine at the standard price ($c_{FN} = 3$ in the base case, varied from 1/3 to 10 in the sensitivity analysis).
+A wine is *good* if its expert quality score is 7 or above. The application is a producer pre-screening batches before paying for an expert tasting panel: a false positive wastes one tasting ($c_{FP} = 1$), and a false negative sells a good wine at the standard price ($c_{FN} = 3$ in the base case, varied from 1/3 to 10 in the sensitivity analysis). We value a good batch's premium at about 4 tasting fees; a miss loses the premium but saves one fee, so it costs about 3 fees. The cost-based threshold analysis (notebook 04) is the project's one extension.
 
 ## Data
 
@@ -19,12 +19,16 @@ UCI Machine Learning Repository, *Wine Quality* (P. Cortez, A. Cerdeira, F. Alme
 | # | Notebook | What it does |
 |---|----------|--------------|
 | 1 | `wine_white_data_split.ipynb` | Data quality checks, white-only justification, duplicate analysis, one stratified 80/20 split on unique wines (`random_state=211`). |
-| 2 | `EDA.ipynb` | Training-set EDA; chooses the log-transformed predictors (`wine_utils.LOG_FEATURES`). |
-| 3 | `03_model_comparison.ipynb` | Logistic regression, LDA and Gaussian NB under grouped 10-fold CV. Selection: best mean PR-AUC, one-SE rule, then lowest expected cost at $t^* = 0.25$. Writes `results/selected_model.json`, `cv_fold_scores.csv`, `oof_probabilities.csv`. |
+| 2 | `EDA.ipynb` | Training-set EDA of all 11 predictors; chooses the log-transformed predictors (`wine_utils.LOG_FEATURES`). |
+| 3 | `03_model_comparison.ipynb` | Fixes the predictor set (drops citric acid), then compares logistic regression, LDA and Gaussian NB on the 10 remaining predictors under grouped 10-fold CV. Selection: best mean PR-AUC, one-SE rule, then lowest expected cost at $t^* = 0.25$. Writes `results/selected_model.json`, `cv_fold_scores.csv`, `oof_probabilities.csv`. |
 | 4 | `04_cost_threshold.ipynb` | The single extension: cost-based threshold analysis on out-of-fold probabilities, sensitivity across cost ratios, saving over the no-model policies, break-even range. Writes `results/operating_point.json`. |
 | 5 | `05_test_audit_refit.ipynb` | **Run once.** Scores the frozen model and threshold on the test set, then refits on all 4,898 rows. |
 
 Shared definitions (features, transforms, folds, costs, candidate models) are in `wine_utils.py`.
+
+## Predictors
+
+The data have 11 physicochemical predictors (`wine_utils.ALL_FEATURES`). All 11 are examined in EDA, but the classifiers use 10 (`wine_utils.MODEL_FEATURES`): **citric acid is dropped**. Best-subset selection for logistic regression, repeated inside each grouped CV fold in notebook 03, dropped citric acid in all 10 folds under AIC with no change in PR-AUC (paired difference 0.000 ± 0.001); BIC's smaller subsets (6-8 predictors) lowered PR-AUC by 0.017 ± 0.006. Citric acid is also the predictor least correlated with being a good wine in the training set ($r = -0.02$). The predictor set was fixed before the test set was loaded. Each pipeline selects its columns as its first step, which learns nothing from the data and so cannot leak.
 
 ## Duplicates and grouped CV
 
@@ -36,11 +40,11 @@ The white file has 937 exact duplicate rows (772 wines recorded 2-8 times). Copi
 
 ## Checks on the design decisions
 
-The last section of `03_model_comparison.ipynb` re-runs CV with one decision changed at a time, after the winner is saved, and ends with a table of every decision, its reason and where the evidence is.
+The last section of `03_model_comparison.ipynb` re-runs CV on the final 10-predictor setup with one decision changed at a time, after the winner is saved, and ends with a table of every decision, its reason and where the evidence is.
 
-- **Grouped vs ordinary folds:** ordinary folds put copies of about a third of validation wines in training, but PR-AUC changes by at most 0.006, so the conclusions do not depend on it. Grouping is kept because it is the correct design.
+- **Grouped vs ordinary folds:** ordinary folds put copies of about a third of validation wines in training, but PR-AUC changes by at most 0.010, so the conclusions do not depend on it. Grouping is kept because it is the correct design.
 - **Log vs raw predictors:** the logs help Gaussian NB (+0.011 ± 0.006) and are neutral for logistic regression and LDA. They were chosen for distribution shape, not performance.
-- **All 11 predictors vs best subset:** AIC keeps 10 (no change in PR-AUC); BIC, run inside each fold, keeps 6-8 and lowers PR-AUC by 0.017 ± 0.006. All 11 are kept.
+- **Dropping citric acid for LDA and NB:** no change for LDA (0.000 ± 0.001); Gaussian NB loses 0.006 ± 0.004, within noise, and would stay outside the one-SE cut-off with all 11, so the selection is unchanged.
 
 ## Reproducing the results
 
