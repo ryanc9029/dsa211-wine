@@ -18,33 +18,34 @@ UCI Machine Learning Repository, *Wine Quality* (P. Cortez, A. Cerdeira, F. Alme
 
 | # | Notebook | What it does |
 |---|----------|--------------|
-| 1 | `wine_white_data_split.ipynb` | Data quality checks, white-only justification, duplicate analysis, one stratified 80/20 split on unique wines (`random_state=211`). |
+| 1 | `wine_white_data_split.ipynb` | Data quality checks, white-only justification, duplicate analysis (duplicates dropped), one stratified 80/20 split on unique wines (`random_state=211`). |
 | 2 | `EDA.ipynb` | Training-set EDA of all 11 predictors; chooses the log-transformed predictors (`wine_utils.LOG_FEATURES`). |
-| 3 | `03_model_comparison.ipynb` | Fixes the predictor set (drops citric acid), then compares logistic regression, LDA and Gaussian NB on the 10 remaining predictors under grouped 10-fold CV. Selection: best mean PR-AUC, one-SE rule, then lowest expected cost at $t^* = 0.25$. Writes `results/selected_model.json`, `cv_fold_scores.csv`, `oof_probabilities.csv`. |
-| 4 | `04_cost_threshold.ipynb` | The single extension: cost-based threshold analysis on out-of-fold probabilities, sensitivity across cost ratios, saving over the no-model policies, break-even range. Writes `results/operating_point.json`. |
-| 5 | `05_test_audit_refit.ipynb` | **Run once.** Scores the frozen model and threshold on the test set, then refits on all 4,898 rows. |
+| 3 | `03_model_comparison.ipynb` | Chooses each classifier's own predictor subset (best subset of each size, number of predictors by the one-SE rule, all under nested 10-fold CV), then compares logistic regression, LDA and Gaussian NB. Selection: best mean PR-AUC, one-SE rule, then lowest expected cost at $t^* = 0.25$. Writes `results/selected_model.json`, `cv_fold_scores.csv`, `oof_probabilities.csv`, `predictor_count_curve.csv`. |
+| 4 | `04_cost_threshold.ipynb` | The single extension: cost-based threshold analysis on out-of-fold probabilities, sensitivity across cost ratios, saving over the no-model policies, break-even range, error analysis by quality score. Writes `results/operating_point.json`. |
+| 5 | `05_test_and_refit.ipynb` | Loads the test set once, scores the frozen model, subset and threshold on the 793 test wines next to the CV estimates, then refits on all 3,961 wines. |
 
-Shared definitions (features, transforms, folds, costs, candidate models) are in `wine_utils.py`.
+Shared definitions (features, transforms, folds, costs, candidate models, subset search) are in `wine_utils.py`.
 
-## Predictors
+## Duplicates: one row per wine
 
-The data have 11 physicochemical predictors (`wine_utils.ALL_FEATURES`). All 11 are examined in EDA, but the classifiers use 10 (`wine_utils.MODEL_FEATURES`): **citric acid is dropped**. Best-subset selection for logistic regression, repeated inside each grouped CV fold in notebook 03, dropped citric acid in all 10 folds under AIC with no change in PR-AUC (paired difference 0.000 ± 0.001); BIC's smaller subsets (6-8 predictors) lowered PR-AUC by 0.017 ± 0.006. Citric acid is also the predictor least correlated with being a good wine in the training set ($r = -0.02$). The predictor set was fixed before the test set was loaded. Each pipeline selects its columns as its first step, which learns nothing from the data and so cannot leak.
+The white file has 937 exact duplicate rows (772 wines recorded 2-8 times). Copies match on all 11 predictors **and** quality, and no set of identical measurements has conflicting quality scores, so we treat them as the same wine measured more than once and **drop them before the split**. Every notebook uses one row per wine: 3,961 wines, split once into 3,168 train and 793 test (`datasets/winequality-white-{train,test}.csv`, never regenerated or edited). Because no wine appears twice, ordinary `StratifiedKFold(n_splits=10, shuffle=True, random_state=211)` cannot put a wine on both sides of a fold, and no wine counts twice. (An earlier version kept the duplicates and used `StratifiedGroupKFold` by wine.)
 
-## Duplicates and grouped CV
+## Predictors: a separate subset for each classifier
 
-The white file has 937 exact duplicate rows (772 wines recorded 2-8 times). Copies match on all 11 predictors **and** quality, and no set of identical measurements has conflicting quality scores, so we treat them as the same wine measured more than once.
+All 11 predictors are examined in EDA. Each classifier then gets its own subset, trading a little accuracy for simplicity (notebook 03):
 
-1. The split is made once, on the 3,961 unique wines, so each wine is entirely in train or entirely in test. `datasets/winequality-white-{train,test}.csv` are never regenerated or edited.
-2. `wine_utils.load_train()` / `load_test()` give each unique wine a `wine_id` and merge the raw file back on all 12 columns, re-attaching the duplicates (train 3,926 rows, test 972 rows). Each returns `(X, y, groups)`.
-3. All CV uses `StratifiedGroupKFold(n_splits=10, shuffle=True, random_state=211)` with `groups = wine_id`, so every copy of a wine stays in one fold. Notebook 03 asserts that no `wine_id` appears on both sides of any fold.
+1. On a given set of training wines, all 2,047 subsets are scored by 5-fold CV PR-AUC, and the best subset of each size $k$ is kept.
+2. Nested CV gives an honest PR-AUC for each $k$: step 1 runs inside each of the 10 outer folds, and the chosen subset is scored on the held-out fold.
+3. The number of predictors $k^*$ is the smallest $k$ within one SE of the best $k$ (the one-SE rule).
+4. The final subset is the best size-$k^*$ subset on all training wines.
 
-## Checks on the design decisions
+| Classifier | Best $k$ (PR-AUC) | Chosen $k^*$ (PR-AUC) | Predictors |
+|---|---|---|---|
+| Logistic (selected) | 9 (0.556) | 6 (0.542) | fixed acidity, log residual sugar, free sulfur dioxide, density, pH, log sulphates |
+| LDA | 9 (0.551) | 6 (0.537) | same 6 as logistic |
+| Gaussian NB | 7 (0.530) | 4 (0.529) | alcohol, pH, log chlorides, citric acid |
 
-The last section of `03_model_comparison.ipynb` re-runs CV on the final 10-predictor setup with one decision changed at a time, after the winner is saved, and ends with a table of every decision, its reason and where the evidence is.
-
-- **Grouped vs ordinary folds:** ordinary folds put copies of about a third of validation wines in training, but PR-AUC changes by at most 0.010, so the conclusions do not depend on it. Grouping is kept because it is the correct design.
-- **Log vs raw predictors:** the logs help Gaussian NB (+0.011 ± 0.006) and are neutral for logistic regression and LDA. They were chosen for distribution shape, not performance.
-- **Dropping citric acid for LDA and NB:** no change for LDA (0.000 ± 0.001); Gaussian NB loses 0.006 ± 0.004, within noise, and would stay outside the one-SE cut-off with all 11, so the selection is unchanged.
+The selected logistic model gives up 0.014 ± 0.008 PR-AUC against its best size (paired, nested CV) to use 6 predictors instead of 9. It leaves out alcohol, whose information is carried by density and residual sugar. Each pipeline selects its columns as its first step, which learns nothing from the data and so cannot leak. A log-vs-raw check on the final subsets shows the log transforms are neutral to slightly helpful; they were chosen for distribution shape, not performance.
 
 ## Reproducing the results
 
@@ -59,5 +60,6 @@ Notebooks 1-4 run top to bottom from a fresh kernel. Re-running notebook 1 rewri
 ## Files
 
 - `datasets/`: raw UCI files and the train/test split
-- `results/`: CV fold scores, out-of-fold probabilities, the selected model and the operating point
+- `results/`: CV fold scores, out-of-fold probabilities, the PR-AUC-by-number-of-predictors curve, the selected model and the operating point
+- `results/subset_search/`: cached inner-CV scores of every predictor subset (lets notebook 03 rerun in about a minute)
 - `AI_DECLARATION.md`: declaration of AI tool use
