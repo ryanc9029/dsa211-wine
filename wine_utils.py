@@ -6,6 +6,7 @@ cost assumptions are defined once.
 
 import numpy as np
 import pandas as pd
+from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.pipeline import Pipeline
@@ -14,12 +15,20 @@ from sklearn.preprocessing import StandardScaler
 # Same seed as the train/test split in wine_white_data_split.ipynb.
 SEED = 211
 
-FEATURES = [
+# All 11 measured predictors. Used for loading, EDA and the predictor-set
+# check in 03_model_comparison.ipynb.
+ALL_FEATURES = [
     'fixed acidity', 'volatile acidity', 'citric acid', 'residual sugar',
     'chlorides', 'free sulfur dioxide', 'total sulfur dioxide', 'density',
     'pH', 'sulphates', 'alcohol'
 ]
-COLUMNS = FEATURES + ['quality']
+COLUMNS = ALL_FEATURES + ['quality']
+
+# Predictors used by every fitted classifier. Citric acid is dropped: best-subset
+# selection by AIC inside each grouped CV fold (03_model_comparison.ipynb) left
+# it out in all 10 folds with no change in PR-AUC.
+DROPPED_FEATURES = ['citric acid']
+MODEL_FEATURES = [f for f in ALL_FEATURES if f not in DROPPED_FEATURES]
 
 RAW_PATH = 'datasets/winequality-white.csv'
 TRAIN_PATH = 'datasets/winequality-white-train.csv'
@@ -32,6 +41,15 @@ N_TRAIN_ROWS, N_TEST_ROWS = 3926, 972
 # nothing from the data, so it is applied outside the CV pipeline.
 LOG_FEATURES = ['volatile acidity', 'residual sugar', 'chlorides', 'sulphates']
 
+
+def log_name(col):
+    """Column name of a predictor after transform()."""
+    return f'log {col}' if col in LOG_FEATURES else col
+
+
+# Model predictors as named after transform(), selected by each pipeline.
+MODEL_COLUMNS = [log_name(c) for c in MODEL_FEATURES]
+
 # Application: a producer pre-screens batches before paying for an expert
 # tasting panel. FP = one wasted tasting; FN = a good wine sold at standard
 # price. Costs are in units of one tasting (c_FP = 1).
@@ -40,8 +58,8 @@ C_FN_BASE = 3
 COST_RATIOS = [1/3, 1/2, 1, 2, 3, 5, 10]   # c_FN / c_FP
 
 
-def _attach_duplicates(split):
-    """Raw rows (duplicates included) belonging to one split, with wine_id.
+def load_rows(split):
+    """Raw rows (duplicates included) of one split, with quality and wine_id.
 
     The split CSVs hold one row per unique wine. Each unique wine gets a
     wine_id (train 0..3167, test 3168..3960), then the raw file is merged
@@ -52,7 +70,7 @@ def _attach_duplicates(split):
     # Repeat rows must be exact copies: matching on the 11 features alone
     # gives the same duplicates as matching on all 12 columns, so no wine
     # has conflicting quality scores.
-    assert raw.duplicated(subset=FEATURES).sum() == raw.duplicated().sum()
+    assert raw.duplicated(subset=ALL_FEATURES).sum() == raw.duplicated().sum()
 
     path, first_id, n_rows = {'train': (TRAIN_PATH, 0, N_TRAIN_ROWS),
                               'test': (TEST_PATH, N_TRAIN_WINES, N_TEST_ROWS)}[split]
@@ -65,7 +83,7 @@ def _attach_duplicates(split):
 
 def load_all():
     """All 4,898 raw rows with wine_id and split, for the final refit only."""
-    df = pd.concat([_attach_duplicates('train'), _attach_duplicates('test')],
+    df = pd.concat([load_rows('train'), load_rows('test')],
                    ignore_index=True)
     assert len(df) == len(pd.read_csv(RAW_PATH, sep=';')), 'unmatched raw rows'
     assert df['wine_id'].nunique() == N_TRAIN_WINES + N_TEST_WINES
@@ -74,18 +92,22 @@ def load_all():
 
 def _split_xyg(df):
     df = df.reset_index(drop=True)
-    return (transform(df[FEATURES]), (df['quality'] >= 7).astype(int),
+    return (transform(df[ALL_FEATURES]), (df['quality'] >= 7).astype(int),
             df['wine_id'])
 
 
 def load_train():
-    """Return (X, y, groups) for the training set, y = 1 if quality >= 7."""
-    return _split_xyg(_attach_duplicates('train'))
+    """Return (X, y, groups) for the training set, y = 1 if quality >= 7.
+
+    X holds all 11 transformed predictors; the pipelines from
+    candidate_models() select MODEL_COLUMNS themselves.
+    """
+    return _split_xyg(load_rows('train'))
 
 
 def load_test():
     """Return (X, y, groups) for the test set. Load it once, in notebook 05."""
-    return _split_xyg(_attach_duplicates('test'))
+    return _split_xyg(load_rows('test'))
 
 
 def transform(X):
@@ -119,24 +141,33 @@ def no_model_costs(share_good, c_fn, c_fp=C_FP):
             'taste all': c_fp * (1 - share_good)}
 
 
-def candidate_models():
-    """The candidates compared in 03_model_comparison.ipynb."""
+def select_columns(columns):
+    """Pipeline step that keeps the named columns and drops the rest.
+
+    It learns nothing from the data (only which columns to keep), so it
+    cannot leak information between folds.
+    """
+    return ColumnTransformer([('keep', 'passthrough', list(columns))],
+                             remainder='drop', verbose_feature_names_out=False)
+
+
+def candidate_models(columns=MODEL_COLUMNS):
+    """The candidates compared in 03_model_comparison.ipynb.
+
+    Each pipeline starts by selecting `columns` (default: the 10 model
+    predictors), so it can be fitted on a frame holding all 11.
+    """
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
     from sklearn.naive_bayes import GaussianNB
-    return {
-        'Logistic': Pipeline([
-            ('scaler', StandardScaler()),
-            ('model', LogisticRegression(C=np.inf, max_iter=5000)),
-        ]),
-        'LDA': Pipeline([
-            ('scaler', StandardScaler()),
-            ('model', LinearDiscriminantAnalysis()),
-        ]),
-        'Gaussian NB': Pipeline([
-            ('scaler', StandardScaler()),
-            ('model', GaussianNB()),
-        ]),
+    models = {
+        'Logistic': LogisticRegression(C=np.inf, max_iter=5000),
+        'LDA': LinearDiscriminantAnalysis(),
+        'Gaussian NB': GaussianNB(),
     }
+    return {name: Pipeline([('select', select_columns(columns)),
+                            ('scaler', StandardScaler()),
+                            ('model', model)])
+            for name, model in models.items()}
 
 
 def build_selected(spec):
