@@ -4,19 +4,25 @@ Every notebook imports from here so the features, transformations, folds and
 cost assumptions are defined once.
 """
 
+import os
+import warnings
+from itertools import combinations
+
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.metrics import average_precision_score
+from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 # Same seed as the train/test split in wine_white_data_split.ipynb.
 SEED = 211
 
-# All 11 measured predictors. Used for loading, EDA and the predictor-set
-# check in 03_model_comparison.ipynb.
+# All 11 measured predictors. Each classifier uses its own subset of these,
+# chosen in 03_model_comparison.ipynb and saved in results/selected_model.json.
 ALL_FEATURES = [
     'fixed acidity', 'volatile acidity', 'citric acid', 'residual sugar',
     'chlorides', 'free sulfur dioxide', 'total sulfur dioxide', 'density',
@@ -24,17 +30,12 @@ ALL_FEATURES = [
 ]
 COLUMNS = ALL_FEATURES + ['quality']
 
-# Predictors used by every fitted classifier. Citric acid is dropped: best-subset
-# selection by AIC inside each grouped CV fold (03_model_comparison.ipynb) left
-# it out in all 10 folds with no change in PR-AUC.
-DROPPED_FEATURES = ['citric acid']
-MODEL_FEATURES = [f for f in ALL_FEATURES if f not in DROPPED_FEATURES]
-
 RAW_PATH = 'datasets/winequality-white.csv'
 TRAIN_PATH = 'datasets/winequality-white-train.csv'
 TEST_PATH = 'datasets/winequality-white-test.csv'
-N_TRAIN_WINES, N_TEST_WINES = 3168, 793
-N_TRAIN_ROWS, N_TEST_ROWS = 3926, 972
+# The split CSVs hold one row per unique wine (duplicates were dropped before
+# the split in wine_white_data_split.ipynb).
+N_TRAIN, N_TEST = 3168, 793
 
 # Right-skewed predictors that get a natural log (chosen in EDA.ipynb on the
 # training set: raw skew > 0.75 and the log reduces |skew|). A log learns
@@ -47,8 +48,8 @@ def log_name(col):
     return f'log {col}' if col in LOG_FEATURES else col
 
 
-# Model predictors as named after transform(), selected by each pipeline.
-MODEL_COLUMNS = [log_name(c) for c in MODEL_FEATURES]
+# All 11 predictors as named after transform().
+ALL_COLUMNS = [log_name(c) for c in ALL_FEATURES]
 
 # Application: a producer pre-screens batches before paying for an expert
 # tasting panel. FP = one wasted tasting; FN = a good wine sold at standard
@@ -58,56 +59,38 @@ C_FN_BASE = 3
 COST_RATIOS = [1/3, 1/2, 1, 2, 3, 5, 10]   # c_FN / c_FP
 
 
-def load_rows(split):
-    """Raw rows (duplicates included) of one split, with quality and wine_id.
-
-    The split CSVs hold one row per unique wine. Each unique wine gets a
-    wine_id (train 0..3167, test 3168..3960), then the raw file is merged
-    back on all 12 columns so every repeat measurement of a wine carries
-    that wine's id. Only the CSV of the requested split is read.
-    """
-    raw = pd.read_csv(RAW_PATH, sep=';')
-    # Repeat rows must be exact copies: matching on the 11 features alone
-    # gives the same duplicates as matching on all 12 columns, so no wine
-    # has conflicting quality scores.
-    assert raw.duplicated(subset=ALL_FEATURES).sum() == raw.duplicated().sum()
-
-    path, first_id, n_rows = {'train': (TRAIN_PATH, 0, N_TRAIN_ROWS),
-                              'test': (TEST_PATH, N_TRAIN_WINES, N_TEST_ROWS)}[split]
-    wines = pd.read_csv(path)
-    wines['wine_id'] = first_id + np.arange(len(wines))
-    df = raw.merge(wines, on=COLUMNS, how='inner', validate='many_to_one')
-    assert len(df) == n_rows
-    return df.assign(split=split)
-
-
-def load_all():
-    """All 4,898 raw rows with wine_id and split, for the final refit only."""
-    df = pd.concat([load_rows('train'), load_rows('test')],
-                   ignore_index=True)
-    assert len(df) == len(pd.read_csv(RAW_PATH, sep=';')), 'unmatched raw rows'
-    assert df['wine_id'].nunique() == N_TRAIN_WINES + N_TEST_WINES
+def load_split(split):
+    """One row per unique wine of one split ('train' or 'test'), with quality."""
+    path, n = {'train': (TRAIN_PATH, N_TRAIN), 'test': (TEST_PATH, N_TEST)}[split]
+    df = pd.read_csv(path)
+    assert len(df) == n and not df.duplicated().any()
     return df
 
 
-def _split_xyg(df):
+def load_all():
+    """All 3,961 unique wines (train + test), for the final refit only."""
+    df = pd.concat([load_split('train'), load_split('test')], ignore_index=True)
+    assert len(df) == N_TRAIN + N_TEST and not df.duplicated().any()
+    return df
+
+
+def _split_xy(df):
     df = df.reset_index(drop=True)
-    return (transform(df[ALL_FEATURES]), (df['quality'] >= 7).astype(int),
-            df['wine_id'])
+    return transform(df[ALL_FEATURES]), (df['quality'] >= 7).astype(int)
 
 
 def load_train():
-    """Return (X, y, groups) for the training set, y = 1 if quality >= 7.
+    """Return (X, y) for the training set, y = 1 if quality >= 7.
 
-    X holds all 11 transformed predictors; the pipelines from
-    candidate_models() select MODEL_COLUMNS themselves.
+    X holds all 11 transformed predictors; each pipeline from
+    candidate_models() selects its own columns.
     """
-    return _split_xyg(load_rows('train'))
+    return _split_xy(load_split('train'))
 
 
 def load_test():
-    """Return (X, y, groups) for the test set. Load it once, in notebook 05."""
-    return _split_xyg(load_rows('test'))
+    """Return (X, y) for the test set. Load it once, in notebook 05."""
+    return _split_xy(load_split('test'))
 
 
 def transform(X):
@@ -119,11 +102,8 @@ def transform(X):
 
 
 def make_cv(k=10):
-    """Stratified folds that keep every copy of a wine in the same fold.
-
-    Always call cv.split(X, y, groups) with the wine_id groups.
-    """
-    return StratifiedGroupKFold(n_splits=k, shuffle=True, random_state=SEED)
+    """Stratified k-fold CV. Each row is a different wine, so folds cannot leak."""
+    return StratifiedKFold(n_splits=k, shuffle=True, random_state=SEED)
 
 
 def expected_cost(y_true, prob, threshold, c_fn, c_fp=C_FP):
@@ -151,11 +131,11 @@ def select_columns(columns):
                              remainder='drop', verbose_feature_names_out=False)
 
 
-def candidate_models(columns=MODEL_COLUMNS):
-    """The candidates compared in 03_model_comparison.ipynb.
+def candidate_models(columns=ALL_COLUMNS):
+    """The three classifiers, each starting by selecting `columns`.
 
-    Each pipeline starts by selecting `columns` (default: the 10 model
-    predictors), so it can be fitted on a frame holding all 11.
+    Pipelines can therefore always be fitted on a frame holding all 11
+    transformed predictors.
     """
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
     from sklearn.naive_bayes import GaussianNB
@@ -172,4 +152,46 @@ def candidate_models(columns=MODEL_COLUMNS):
 
 def build_selected(spec):
     """Rebuild the frozen specification saved by 03_model_comparison.ipynb."""
-    return candidate_models()[spec['name']]
+    return candidate_models(spec['predictors'])[spec['name']]
+
+
+def _score_subsets(name, subsets, X, y, n_splits):
+    """Inner-CV PR-AUC of each subset for one model; warnings are counted, not shown."""
+    splits = list(StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=SEED).split(X, y))
+    out = []
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        for cols in subsets:
+            model = candidate_models(cols)[name]
+            s = [average_precision_score(y.iloc[va], model.fit(X.iloc[tr], y.iloc[tr])
+                                         .predict_proba(X.iloc[va])[:, 1]) for tr, va in splits]
+            out.append(('|'.join(cols), len(cols), np.mean(s), np.std(s, ddof=1) / np.sqrt(n_splits)))
+    n_conv = sum(issubclass(w.category, ConvergenceWarning) for w in caught)
+    return out, n_conv, len(caught) - n_conv
+
+
+def subset_cv_scores(name, X, y, n_splits=5, n_jobs=-1):
+    """Inner stratified-CV PR-AUC (mean, SE) of every non-empty subset of X's columns.
+
+    Returns a DataFrame with one row per subset (2,047 for 11 columns) and the
+    number of warnings suppressed. Runs in parallel over subsets.
+    """
+    from joblib import Parallel, delayed, parallel_config, cpu_count
+    # Worker processes must be able to import this module.
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in os.environ.get('PYTHONPATH', '').split(os.pathsep):
+        os.environ['PYTHONPATH'] = os.pathsep.join(filter(None, [here, os.environ.get('PYTHONPATH')]))
+
+    subsets = [list(c) for k in range(1, X.shape[1] + 1) for c in combinations(X.columns, k)]
+    n_chunks = 4 * cpu_count()
+    with parallel_config(backend='loky', inner_max_num_threads=1):
+        res = Parallel(n_jobs=n_jobs)(delayed(_score_subsets)(name, subsets[i::n_chunks], X, y, n_splits)
+                                      for i in range(n_chunks))
+    scores = pd.DataFrame([r for rows, _, _ in res for r in rows], columns=['subset', 'size', 'mean', 'se'])
+    warn = {'convergence': sum(r[1] for r in res), 'other': sum(r[2] for r in res)}
+    return scores, warn
+
+
+def best_of_size(scores, k):
+    """Columns of the subset with the highest inner-CV mean among subsets of size k."""
+    return scores[scores['size'] == k].sort_values('mean').iloc[-1]['subset'].split('|')
