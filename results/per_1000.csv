@@ -1,0 +1,8 @@
+,"Per 1,000 wines at threshold 0.2 (r = 3)"
+Sent to the panel,388.9
+  of which good (caught),162.2
+  of which not good (wasted tastings),226.6
+Good wines not sent (missed),46.1
+Good wines in total,208.3
+Precision of panel referrals (%),41.7
+Base rate of good wines (%),20.8

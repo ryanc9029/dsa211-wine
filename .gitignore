@@ -218,6 +218,5 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-__pycache__/
 # Subset-search cache written by 03_model_comparison.ipynb (rebuilt automatically, about 10 min)
 results/subsets/
