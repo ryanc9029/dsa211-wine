@@ -1,0 +1,53 @@
+{
+  "name": "Logistic",
+  "predictors": [
+    "fixed acidity",
+    "log residual sugar",
+    "free sulfur dioxide",
+    "density",
+    "pH",
+    "log sulphates"
+  ],
+  "n_predictors": 6,
+  "cv_pr_auc_mean": 0.5345227561765242,
+  "cv_pr_auc_se": 0.01844374776061791,
+  "cv_roc_auc_mean": 0.8018381987202705,
+  "cv_roc_auc_se": 0.010543537415940323,
+  "one_se_cutoff_models": 0.5160790084159064,
+  "cv": "Nested: outer StratifiedKFold(10, shuffle, 211); inner StratifiedKFold(5, shuffle, 211)",
+  "all_models": {
+    "Logistic": {
+      "predictors": [
+        "fixed acidity",
+        "log residual sugar",
+        "free sulfur dioxide",
+        "density",
+        "pH",
+        "log sulphates"
+      ],
+      "n_predictors": 6,
+      "one_se_cutoff_subsets": 0.538661039866455
+    },
+    "LDA": {
+      "predictors": [
+        "fixed acidity",
+        "log residual sugar",
+        "free sulfur dioxide",
+        "density",
+        "pH",
+        "log sulphates"
+      ],
+      "n_predictors": 6,
+      "one_se_cutoff_subsets": 0.5414789185161306
+    },
+    "Gaussian NB": {
+      "predictors": [
+        "citric acid",
+        "pH",
+        "alcohol"
+      ],
+      "n_predictors": 3,
+      "one_se_cutoff_subsets": 0.5162488667190718
+    }
+  }
+}

@@ -1,0 +1,34 @@
+,size,mean,se,subset
+Logistic,1,0.48648489034547876,0.015522831474700474,alcohol
+Logistic,2,0.5075465236704335,0.01764135311728598,free sulfur dioxide|alcohol
+Logistic,3,0.5216773581893088,0.019666831542783328,log chlorides|free sulfur dioxide|alcohol
+Logistic,4,0.530853950245338,0.018308051845831973,fixed acidity|log residual sugar|density|pH
+Logistic,5,0.5380100771051805,0.015698242135596598,fixed acidity|log residual sugar|free sulfur dioxide|density|pH
+Logistic,6,0.5451040235516469,0.017195989240161236,fixed acidity|log residual sugar|free sulfur dioxide|density|pH|log sulphates
+Logistic,7,0.5515313412271347,0.018436531414996533,fixed acidity|log residual sugar|free sulfur dioxide|total sulfur dioxide|density|pH|log sulphates
+Logistic,8,0.5562549021864683,0.017593862320013406,fixed acidity|log residual sugar|log chlorides|free sulfur dioxide|total sulfur dioxide|density|pH|log sulphates
+Logistic,9,0.5553203570698362,0.017538162729205584,fixed acidity|log residual sugar|log chlorides|free sulfur dioxide|total sulfur dioxide|density|pH|log sulphates|alcohol
+Logistic,10,0.5539355219714148,0.012599992684897265,fixed acidity|log volatile acidity|log residual sugar|log chlorides|free sulfur dioxide|total sulfur dioxide|density|pH|log sulphates|alcohol
+Logistic,11,0.5505670741034432,0.012625954721134824,fixed acidity|log volatile acidity|citric acid|log residual sugar|log chlorides|free sulfur dioxide|total sulfur dioxide|density|pH|log sulphates|alcohol
+LDA,1,0.48648489034547876,0.015522831474700474,alcohol
+LDA,2,0.5068568974082647,0.017531434515150764,free sulfur dioxide|alcohol
+LDA,3,0.5196509886796234,0.01949785243363044,log chlorides|free sulfur dioxide|alcohol
+LDA,4,0.528947872778947,0.018181476382783064,fixed acidity|log residual sugar|density|pH
+LDA,5,0.5343314941084003,0.015669359048471963,fixed acidity|log residual sugar|free sulfur dioxide|density|pH
+LDA,6,0.5424070754268325,0.01771115827138505,fixed acidity|log residual sugar|free sulfur dioxide|density|pH|log sulphates
+LDA,7,0.5511641352623671,0.018932099983932606,fixed acidity|log residual sugar|free sulfur dioxide|total sulfur dioxide|density|pH|log sulphates
+LDA,8,0.5540441173993246,0.017967096216982868,fixed acidity|log residual sugar|log chlorides|free sulfur dioxide|total sulfur dioxide|density|pH|log sulphates
+LDA,9,0.5570849627674231,0.01560604425129252,fixed acidity|log volatile acidity|log residual sugar|log chlorides|free sulfur dioxide|total sulfur dioxide|density|pH|log sulphates
+LDA,10,0.5534184186380031,0.015694374128171658,fixed acidity|log volatile acidity|log residual sugar|log chlorides|free sulfur dioxide|total sulfur dioxide|density|pH|log sulphates|alcohol
+LDA,11,0.5499373561560916,0.015848965199251122,fixed acidity|log volatile acidity|citric acid|log residual sugar|log chlorides|free sulfur dioxide|total sulfur dioxide|density|pH|log sulphates|alcohol
+Gaussian NB,1,0.48648489034547876,0.015522831474700474,alcohol
+Gaussian NB,2,0.5050912692994209,0.02074617937227931,log chlorides|alcohol
+Gaussian NB,3,0.5181028734542649,0.015288376034449236,citric acid|pH|alcohol
+Gaussian NB,4,0.5297258972175745,0.017799308855226785,citric acid|log chlorides|pH|alcohol
+Gaussian NB,5,0.531816290774601,0.01801291077856175,citric acid|log chlorides|pH|log sulphates|alcohol
+Gaussian NB,6,0.5304412403871991,0.018012353626162925,citric acid|log chlorides|total sulfur dioxide|pH|log sulphates|alcohol
+Gaussian NB,7,0.5320176759194746,0.015768809200402755,fixed acidity|citric acid|log chlorides|total sulfur dioxide|pH|log sulphates|alcohol
+Gaussian NB,8,0.5295200715380981,0.014583653282817572,fixed acidity|log volatile acidity|citric acid|log chlorides|total sulfur dioxide|pH|log sulphates|alcohol
+Gaussian NB,9,0.5250180357927912,0.014176235015548282,fixed acidity|log volatile acidity|citric acid|log chlorides|total sulfur dioxide|density|pH|log sulphates|alcohol
+Gaussian NB,10,0.5203662206971289,0.014922123855997773,fixed acidity|log volatile acidity|citric acid|log chlorides|free sulfur dioxide|total sulfur dioxide|density|pH|log sulphates|alcohol
+Gaussian NB,11,0.5144758967076437,0.014714651422366757,fixed acidity|log volatile acidity|citric acid|log residual sugar|log chlorides|free sulfur dioxide|total sulfur dioxide|density|pH|log sulphates|alcohol

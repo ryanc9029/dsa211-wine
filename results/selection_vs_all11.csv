@@ -1,0 +1,8 @@
+,Logistic,LDA,Gaussian NB
+subset sizes chosen in outer folds,4-7,4-7,2-5
+final subset size,6,6,3
+nested PR-AUC (per-model subset),0.535 ± 0.018,0.526 ± 0.018,0.510 ± 0.020
+all-11 PR-AUC,0.551 ± 0.013,0.550 ± 0.016,0.514 ± 0.015
+paired difference (subset - all 11),-0.016 ± 0.009,-0.024 ± 0.008,-0.005 ± 0.012
+nested ROC-AUC,0.802 ± 0.011,0.798 ± 0.011,0.792 ± 0.010
+all-11 ROC-AUC,0.819 ± 0.009,0.815 ± 0.010,0.796 ± 0.009
