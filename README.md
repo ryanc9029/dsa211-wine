@@ -6,7 +6,7 @@ DSA211 Statistical Learning (SMU), Topic 2: Classification System Evaluation.
 
 **Can physicochemical properties identify high-quality white Vinho Verde wine?**
 
-A wine is *good* if its expert quality score is 7 or above. On the training set 6 is both the most common and the median score. A cut-off of 6 would make 66% of wines "good", so the label would no longer mean high quality; a cut-off of 8 would leave only 109 good wines, about 11 per validation fold under the project's 10-fold CV, too few for stable estimates. A cut-off of 7 marks the top 20.8% (about 66 good wines per fold); see `EDA.ipynb`. The application is a producer pre-screening batches before paying for an expert tasting panel: a false positive wastes one tasting ($c_{FP} = 1$), and a false negative sells a good wine at the standard price ($c_{FN} = 3$ in the base case, varied from 1/3 to 10 in the sensitivity analysis). We value a good batch's premium at about 4 tasting fees; a miss loses the premium but saves one fee, so it costs about 3 fees. The cost-based threshold analysis (notebook 04) is the project's one extension.
+A wine is *good* if its expert quality score is 7 or above. The application is a producer pre-screening batches before paying for an expert tasting panel: a false positive wastes one tasting ($c_{FP} = 1$), and a false negative sells a good wine at the standard price ($c_{FN} = 3$ in the base case, varied from 1/3 to 10 in the sensitivity analysis). We value a good batch's premium at about 4 tasting fees; a miss loses the premium but saves one fee, so it costs about 3 fees. The cost-based threshold analysis (notebook 04) is the project's one extension.
 
 ## Data
 
