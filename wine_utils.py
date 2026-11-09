@@ -155,9 +155,32 @@ def build_selected(spec):
     return candidate_models(spec['predictors'])[spec['name']]
 
 
-def _score_subsets(name, subsets, X, y, n_splits):
-    """Inner-CV PR-AUC of each subset for one model; warnings are counted, not shown."""
-    splits = list(StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=SEED).split(X, y))
+def one_se_choice(candidates):
+    """The project's one-SE rule, used for every choice made by CV.
+
+    `candidates` is a DataFrame with one row per candidate and columns
+    'mean' (mean CV PR-AUC), 'se' (SD of the fold scores / sqrt(number of
+    folds)) and 'simplicity' (lower = simpler: the number of predictors for a
+    subset, the expected cost per wine at t* for a model). The cut-off is the
+    best mean minus the best candidate's SE; among candidates at or above it,
+    the simplest is chosen, with ties broken by the higher mean.
+
+    Returns (chosen index, cut-off, index of the best candidate).
+    """
+    best = candidates['mean'].idxmax()
+    cutoff = candidates.loc[best, 'mean'] - candidates.loc[best, 'se']
+    eligible = candidates[candidates['mean'] >= cutoff]
+    chosen = eligible.sort_values(['simplicity', 'mean'], ascending=[True, False]).index[0]
+    return chosen, cutoff, best
+
+
+def all_subsets(columns):
+    """Every non-empty subset of `columns` (2,047 for 11 predictors)."""
+    return [list(c) for k in range(1, len(columns) + 1) for c in combinations(columns, k)]
+
+
+def _score_subsets(name, subsets, X, y, splits):
+    """PR-AUC on each fold for each subset; warnings are recorded and counted."""
     out = []
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter('always')
@@ -165,16 +188,17 @@ def _score_subsets(name, subsets, X, y, n_splits):
             model = candidate_models(cols)[name]
             s = [average_precision_score(y.iloc[va], model.fit(X.iloc[tr], y.iloc[tr])
                                          .predict_proba(X.iloc[va])[:, 1]) for tr, va in splits]
-            out.append(('|'.join(cols), len(cols), np.mean(s), np.std(s, ddof=1) / np.sqrt(n_splits)))
+            out.append(('|'.join(cols), len(cols), np.mean(s), np.std(s, ddof=1) / np.sqrt(len(s))))
     n_conv = sum(issubclass(w.category, ConvergenceWarning) for w in caught)
     return out, n_conv, len(caught) - n_conv
 
 
-def subset_cv_scores(name, X, y, n_splits=5, n_jobs=-1):
-    """Inner stratified-CV PR-AUC (mean, SE) of every non-empty subset of X's columns.
+def subset_scores(name, X, y, splits, n_jobs=-1):
+    """Mean and SE of the CV PR-AUC of every subset of X's columns for one model.
 
-    Returns a DataFrame with one row per subset (2,047 for 11 columns) and the
-    number of warnings suppressed. Runs in parallel over subsets.
+    `splits` are (train, validation) positions into X. Runs in parallel over
+    subsets. Returns the scores (columns subset, size, mean, se) and the
+    number of convergence and other warnings raised while fitting.
     """
     from joblib import Parallel, delayed, parallel_config, cpu_count
     # Worker processes must be able to import this module.
@@ -182,16 +206,11 @@ def subset_cv_scores(name, X, y, n_splits=5, n_jobs=-1):
     if here not in os.environ.get('PYTHONPATH', '').split(os.pathsep):
         os.environ['PYTHONPATH'] = os.pathsep.join(filter(None, [here, os.environ.get('PYTHONPATH')]))
 
-    subsets = [list(c) for k in range(1, X.shape[1] + 1) for c in combinations(X.columns, k)]
+    subsets = all_subsets(list(X.columns))
     n_chunks = 4 * cpu_count()
     with parallel_config(backend='loky', inner_max_num_threads=1):
-        res = Parallel(n_jobs=n_jobs)(delayed(_score_subsets)(name, subsets[i::n_chunks], X, y, n_splits)
+        res = Parallel(n_jobs=n_jobs)(delayed(_score_subsets)(name, subsets[i::n_chunks], X, y, splits)
                                       for i in range(n_chunks))
     scores = pd.DataFrame([r for rows, _, _ in res for r in rows], columns=['subset', 'size', 'mean', 'se'])
     warn = {'convergence': sum(r[1] for r in res), 'other': sum(r[2] for r in res)}
     return scores, warn
-
-
-def best_of_size(scores, k):
-    """Columns of the subset with the highest inner-CV mean among subsets of size k."""
-    return scores[scores['size'] == k].sort_values('mean').iloc[-1]['subset'].split('|')
