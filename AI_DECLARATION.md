@@ -31,7 +31,7 @@ The group asked Claude Code to check the draft report against the repository. Cl
 - added a cell to the EDA notebook printing each predictor's median for good and not-good wines, and added chlorides and the class overlap to the box-plot commentary, so that the figures quoted in report sections 4.1 and 4.2 trace to notebook outputs;
 - quoted the share of good wines as 20.8% throughout, and compared white and red wine on unique wines only;
 - renamed `wine_white_data_split.ipynb` and `EDA.ipynb` to `01_data_split.ipynb` and `02_eda.ipynb`, updated every reference, and removed the undefined workflow step numbers from the notebooks;
-- re-ran the EDA notebook and notebook 03 in an environment built from `requirements.txt` and confirmed that the results files were unchanged;
+- re-ran the EDA notebook and notebooks 03 and 05 (05 to update a plot label) in an environment built from `requirements.txt`, and confirmed that every printed result and results file was unchanged apart from floating-point noise below 10⁻¹⁴;
 - updated the README, `results/NUMBERS_FOR_SLIDES.md`, `results/CHANGES.md` and this record.
 
 ## What the group did
