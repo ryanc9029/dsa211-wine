@@ -1,9 +1,9 @@
 # Numbers for the slides
 
-Generated from the saved results after running all notebooks top to bottom on branch `revision/v2`. Each section names the notebook cell it comes from (cells numbered from 1 in notebook order). CV figures are mean ± SE over 10 folds unless stated.
+Generated from the saved results after running all notebooks top to bottom. Each section names the notebook cell it comes from (cells numbered from 1 in notebook order). CV figures are mean ± SE over 10 folds unless stated.
 
 ## Quality distribution and cut-off (training set, 3,168 wines)
-Source: `wine_white_data_split.ipynb`, cell 35 and `wine_white_data_split.ipynb`, cell 36
+Source: `01_data_split.ipynb`, cell 35 and `01_data_split.ipynb`, cell 36
 
 | Quality | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
 |---|---|---|---|---|---|---|---|
@@ -16,7 +16,7 @@ Source: `wine_white_data_split.ipynb`, cell 35 and `wine_white_data_split.ipynb`
 | 8 | 109 | 3.4% | 10.9 |
 
 ## Class balance
-Source: `wine_white_data_split.ipynb`, cell 5 (raw file), `03_model_comparison.ipynb`, cell 5 (folds), `05_test_and_refit.ipynb`, cell 6 (test)
+Source: `01_data_split.ipynb`, cell 5 (raw file), `03_model_comparison.ipynb`, cell 5 (folds), `05_test_and_refit.ipynb`, cell 6 (test)
 
 - Raw white file: 4,898 rows, 21.6% good; after removing 937 repeat rows: 3,961 unique wines.
 - Training: 3168 wines, 660 good (20.8%); every CV fold has 66 good wines (316-317 wines per fold).

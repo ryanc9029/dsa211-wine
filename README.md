@@ -6,13 +6,13 @@ DSA211 Statistical Learning (SMU), Topic 2: Classification System Evaluation.
 
 **Can physicochemical properties identify high-quality white Vinho Verde wine?**
 
-A wine is *good* if its expert quality score is 7 or above (justified in the split notebook: at 6 or above two-thirds of wines would be "good", at 8 or above only about 11 good wines would fall in each CV fold). The application is a producer pre-screening batches before paying for an expert tasting panel: a false positive wastes one tasting ($c_{FP} = 1$), and a false negative sells a good wine at the standard price ($c_{FN} = 3$ in the base case, varied from 1/3 to 10 in the sensitivity analysis). We value a good batch's premium at about 4 tasting fees; a miss loses the premium but saves one fee, so it costs about 3 fees. The cost-based threshold analysis (notebook 04) is the project's one extension.
+A wine is *good* if its expert quality score is 7 or above (justified in `01_data_split.ipynb`: at 6 or above two-thirds of wines would be "good", at 8 or above only about 11 good wines would fall in each CV fold). The application is a producer pre-screening batches before paying for an expert tasting panel: a false positive wastes one tasting ($c_{FP} = 1$), and a false negative sells a good wine at the standard price ($c_{FN} = 3$ in the base case, varied from 1/3 to 10 in the sensitivity analysis). We value a good batch's premium at about 4 tasting fees; a miss loses the premium but saves one fee, so it costs about 3 fees. The cost-based threshold analysis (notebook 04) is the project's one extension.
 
 ## Data
 
 UCI Machine Learning Repository, *Wine Quality* (P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis, 2009, *Modeling wine preferences by data mining from physicochemical properties*, Decision Support Systems 47(4)). Licence: CC BY 4.0. <https://archive.ics.uci.edu/dataset/186/wine+quality>
 
-**White wine only.** White has 4,898 rows (3,961 unique) with 21.6% good wines; red has 1,599 rows (1,359 unique) with 13.6% good wines, i.e. 825 vs 184 good wines after deduplication. Red's rare class is too small for stable 10-fold estimates (about 15 good wines per validation fold), and pooling the two would break LDA's equal-covariance assumption because their chemistry differs strongly. The red file is read only to compute these counts.
+**White wine only.** White has 4,898 rows (3,961 unique) and red has 1,599 rows (1,359 unique); after deduplication there are 825 good white wines (20.8%) vs 184 good red wines (13.5%). Red's rare class is too small for stable 10-fold estimates (about 15 good wines per validation fold), and pooling the two would break LDA's equal-covariance assumption because their chemistry differs strongly. The red file is read only to compute these counts.
 
 **One row per wine.** The white file has 937 repeat rows (772 wines recorded 2-8 times), identical on all 11 predictors and quality. We treat them as the same wine measured more than once and remove them before the split, leaving 3,961 unique wines: 3,168 in training and 793 in test (`datasets/winequality-white-{train,test}.csv`, stratified 80/20, `random_state=211`). Because every wine appears once, all CV uses ordinary `StratifiedKFold(n_splits=10, shuffle=True, random_state=211)`: each wine sits in exactly one fold, so no copy can leak between training and validation.
 
@@ -20,8 +20,8 @@ UCI Machine Learning Repository, *Wine Quality* (P. Cortez, A. Cerdeira, F. Alme
 
 | # | Notebook | What it does |
 |---|----------|--------------|
-| 1 | `wine_white_data_split.ipynb` | Data quality checks, white-only justification, duplicate analysis (repeat rows removed), one stratified 80/20 split, and the quality-cut-off justification on the training set (`results/quality_distribution.png`). |
-| 2 | `EDA.ipynb` | Training-set EDA of all 11 predictors; chooses the four log-transformed predictors (`wine_utils.LOG_FEATURES`). |
+| 1 | `01_data_split.ipynb` | Data quality checks, white-only justification, duplicate analysis (repeat rows removed), one stratified 80/20 split, and the quality-cut-off justification on the training set (`results/quality_distribution.png`). |
+| 2 | `02_eda.ipynb` | Training-set EDA of all 11 predictors; chooses the four log-transformed predictors (`wine_utils.LOG_FEATURES`). |
 | 3 | `03_model_comparison.ipynb` | Per-model best-subset selection with the one-SE rule, evaluated by nested CV; compares logistic regression, LDA and Gaussian NB and selects one with the same rule. Writes `results/selected_model.json`, the nested out-of-fold probabilities and `results/subset_tradeoff.png`. |
 | 4 | `04_cost_threshold.ipynb` | The single extension: cost-based threshold analysis on the nested out-of-fold probabilities, sensitivity across cost ratios, savings over the no-model policies, break-even range, bootstrap interval and error analysis by quality score. Writes `results/operating_point.json`. |
 | 5 | `05_test_and_refit.ipynb` | Loads the test set once, scores the frozen model, subset and threshold next to the CV estimates, then refits on all 3,961 wines (odds ratios per SD with 95% CIs). |
@@ -59,12 +59,13 @@ Every number used in the slides is listed, with its source cell, in `results/NUM
 ## Reproducing the results
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 # open the notebooks in Jupyter / VS Code and run them in the order above, top to bottom
 ```
 
-Each notebook runs top to bottom from a fresh kernel. Re-running notebook 1 rewrites the split CSVs with identical contents (fixed seed). The first run of notebook 03 takes about 10 minutes; its subset scores are cached in `results/subsets/` (not in git), so later runs take about a minute. The test set is read only in notebook 05.
+Each notebook runs top to bottom from a fresh kernel. Re-running notebook 1 rewrites the split CSVs with identical contents (fixed seed). The first run of notebook 03 takes about 10-20 minutes, depending on the machine; its subset scores are cached in `results/subsets/` (not in git), so later runs take about a minute. The test set is read only in notebook 05.
 
 ## Files
 
