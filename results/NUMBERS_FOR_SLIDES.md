@@ -1,6 +1,6 @@
 # Numbers for the slides
 
-Generated from the saved results after running all notebooks top to bottom on branch `revision/v2`. Each section names the notebook cell it comes from (cells numbered from 1 in notebook order). CV figures are mean ± SE over 10 folds unless stated.
+Generated from the saved results after running all notebooks top to bottom. Each section names the notebook cell it comes from (cells numbered from 1 in notebook order). CV figures are mean ± SE over 10 folds unless stated.
 
 ## Quality distribution and cut-off (training set, 3,168 wines)
 Source: `01_data_split.ipynb`, cell 35 and `01_data_split.ipynb`, cell 36

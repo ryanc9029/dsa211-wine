@@ -33,6 +33,9 @@ It had the best score. LDA was close enough to count as a tie, and logistic regr
 ## 8. The cost results (our one extension) were rerun
 The best threshold is now 0.20. Per 1,000 wines, the panel tastes about 389 and catches 162 of the 208 good ones, which is 42% cheaper than tasting nothing. This holds as long as a missed good wine costs between about 1.4 and 12 tastings.
 
+## 9. Tidy-ups after revision v2
+No results changed. The two first notebooks are now numbered like the rest: `wine_white_data_split.ipynb` is `01_data_split.ipynb` and `EDA.ipynb` is `02_eda.ipynb`. The EDA notebook now prints each predictor's median for good and not-good wines, so the medians quoted in the report can be checked. The share of good wines is quoted as 20.8% everywhere, and white and red wines are compared on unique wines only (20.8% vs 13.5% good).
+
 ## Things to know before presenting
 - **Alcohol is not one of the 6 predictors**, even though it is the single strongest one. Density and residual sugar together carry almost the same information, because a wine's density depends on its sugar and alcohol. Expect a question on this. The large density effect in the final model is mostly the alcohol effect.
 - **The best threshold (0.20) sits at the low end of its bootstrap range (0.20-0.30).** Any threshold from about 0.18 to 0.31 gives almost the same cost, so this does not change the conclusions.

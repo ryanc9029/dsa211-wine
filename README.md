@@ -59,12 +59,13 @@ Every number used in the slides is listed, with its source cell, in `results/NUM
 ## Reproducing the results
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 # open the notebooks in Jupyter / VS Code and run them in the order above, top to bottom
 ```
 
-Each notebook runs top to bottom from a fresh kernel. Re-running notebook 1 rewrites the split CSVs with identical contents (fixed seed). The first run of notebook 03 takes about 10 minutes; its subset scores are cached in `results/subsets/` (not in git), so later runs take about a minute. The test set is read only in notebook 05.
+Each notebook runs top to bottom from a fresh kernel. Re-running notebook 1 rewrites the split CSVs with identical contents (fixed seed). The first run of notebook 03 takes about 10-20 minutes, depending on the machine; its subset scores are cached in `results/subsets/` (not in git), so later runs take about a minute. The test set is read only in notebook 05.
 
 ## Files
 
