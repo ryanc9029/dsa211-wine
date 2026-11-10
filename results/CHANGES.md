@@ -24,7 +24,7 @@ It had the best score. LDA was close enough to count as a tie, and logistic regr
 
 ## 6. Why "good" means a score of 7 or more
 **What:** We added a chart of quality scores and a table comparing cut-offs of 6, 7 and 8 (`quality_distribution.png`).
-**Why:** At 6 or more, two-thirds of wines would be "good", so it would no longer mean premium. At 8 or more, only about 11 good wines would fall in each cross-validation fold, which is too few. At 7 or more, about 21% of wines are good: rare, but enough to work with. We could not access the original paper to check whether it uses 7 as a cut-off, so we don't claim that it does.
+**Why:** At 6 or more, two-thirds of wines would be "good", so it would no longer mean premium. At 8 or more, only about 11 good wines would fall in each cross-validation fold, which is too few. At 7 or more, 20.8% of wines are good: rare, but enough to work with. We could not access the original paper to check whether it uses 7 as a cut-off, so we don't claim that it does.
 
 ## 7. Where the model makes mistakes
 **What:** A new error analysis in notebook 04, by true quality score.
