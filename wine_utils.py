@@ -18,7 +18,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-# Same seed as the train/test split in wine_white_data_split.ipynb.
+# Same seed as the train/test split in 01_data_split.ipynb.
 SEED = 211
 
 # All 11 measured predictors. Each classifier uses its own subset of these,
@@ -34,10 +34,10 @@ RAW_PATH = 'datasets/winequality-white.csv'
 TRAIN_PATH = 'datasets/winequality-white-train.csv'
 TEST_PATH = 'datasets/winequality-white-test.csv'
 # The split CSVs hold one row per unique wine (duplicates were dropped before
-# the split in wine_white_data_split.ipynb).
+# the split in 01_data_split.ipynb).
 N_TRAIN, N_TEST = 3168, 793
 
-# Right-skewed predictors that get a natural log (chosen in EDA.ipynb on the
+# Right-skewed predictors that get a natural log (chosen in 02_eda.ipynb on the
 # training set: raw skew > 0.75 and the log reduces |skew|). A log learns
 # nothing from the data, so it is applied outside the CV pipeline.
 LOG_FEATURES = ['volatile acidity', 'residual sugar', 'chlorides', 'sulphates']

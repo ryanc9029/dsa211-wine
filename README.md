@@ -6,7 +6,7 @@ DSA211 Statistical Learning (SMU), Topic 2: Classification System Evaluation.
 
 **Can physicochemical properties identify high-quality white Vinho Verde wine?**
 
-A wine is *good* if its expert quality score is 7 or above (justified in the split notebook: at 6 or above two-thirds of wines would be "good", at 8 or above only about 11 good wines would fall in each CV fold). The application is a producer pre-screening batches before paying for an expert tasting panel: a false positive wastes one tasting ($c_{FP} = 1$), and a false negative sells a good wine at the standard price ($c_{FN} = 3$ in the base case, varied from 1/3 to 10 in the sensitivity analysis). We value a good batch's premium at about 4 tasting fees; a miss loses the premium but saves one fee, so it costs about 3 fees. The cost-based threshold analysis (notebook 04) is the project's one extension.
+A wine is *good* if its expert quality score is 7 or above (justified in `01_data_split.ipynb`: at 6 or above two-thirds of wines would be "good", at 8 or above only about 11 good wines would fall in each CV fold). The application is a producer pre-screening batches before paying for an expert tasting panel: a false positive wastes one tasting ($c_{FP} = 1$), and a false negative sells a good wine at the standard price ($c_{FN} = 3$ in the base case, varied from 1/3 to 10 in the sensitivity analysis). We value a good batch's premium at about 4 tasting fees; a miss loses the premium but saves one fee, so it costs about 3 fees. The cost-based threshold analysis (notebook 04) is the project's one extension.
 
 ## Data
 
@@ -20,8 +20,8 @@ UCI Machine Learning Repository, *Wine Quality* (P. Cortez, A. Cerdeira, F. Alme
 
 | # | Notebook | What it does |
 |---|----------|--------------|
-| 1 | `wine_white_data_split.ipynb` | Data quality checks, white-only justification, duplicate analysis (repeat rows removed), one stratified 80/20 split, and the quality-cut-off justification on the training set (`results/quality_distribution.png`). |
-| 2 | `EDA.ipynb` | Training-set EDA of all 11 predictors; chooses the four log-transformed predictors (`wine_utils.LOG_FEATURES`). |
+| 1 | `01_data_split.ipynb` | Data quality checks, white-only justification, duplicate analysis (repeat rows removed), one stratified 80/20 split, and the quality-cut-off justification on the training set (`results/quality_distribution.png`). |
+| 2 | `02_eda.ipynb` | Training-set EDA of all 11 predictors; chooses the four log-transformed predictors (`wine_utils.LOG_FEATURES`). |
 | 3 | `03_model_comparison.ipynb` | Per-model best-subset selection with the one-SE rule, evaluated by nested CV; compares logistic regression, LDA and Gaussian NB and selects one with the same rule. Writes `results/selected_model.json`, the nested out-of-fold probabilities and `results/subset_tradeoff.png`. |
 | 4 | `04_cost_threshold.ipynb` | The single extension: cost-based threshold analysis on the nested out-of-fold probabilities, sensitivity across cost ratios, savings over the no-model policies, break-even range, bootstrap interval and error analysis by quality score. Writes `results/operating_point.json`. |
 | 5 | `05_test_and_refit.ipynb` | Loads the test set once, scores the frozen model, subset and threshold next to the CV estimates, then refits on all 3,961 wines (odds ratios per SD with 95% CIs). |
