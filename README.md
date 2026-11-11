@@ -2,6 +2,8 @@
 
 DSA211 Statistical Learning (SMU), Topic 2: Classification System Evaluation.
 
+> **Submission version:** [`DSA211_G1T7_wine_quality.ipynb`](DSA211_G1T7_wine_quality.ipynb) combines notebooks 01-05 and `wine_utils.py` into one notebook (Parts 0-5) that runs on its own: it downloads the UCI data if `datasets/` is missing and runs top to bottom in about 10 minutes. The separate notebooks below are the working versions it was built from; both give identical results.
+
 ## Research question
 
 **Can physicochemical properties identify high-quality white Vinho Verde wine?**
@@ -62,13 +64,18 @@ Every number used in the slides is listed, with its source cell, in `results/NUM
 python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-# open the notebooks in Jupyter / VS Code and run them in the order above, top to bottom
+# either open DSA211_G1T7_wine_quality.ipynb and run all cells,
+# or run the separate notebooks in the order above, top to bottom
 ```
+
+The combined notebook needs nothing else in the folder: on its first run it downloads the two raw UCI files into `datasets/` and checks them against fixed SHA-1 fingerprints.
 
 Each notebook runs top to bottom from a fresh kernel. Re-running notebook 1 rewrites the split CSVs with identical contents (fixed seed). The first run of notebook 03 takes about 10-20 minutes, depending on the machine; its subset scores are cached in `results/subsets/` (not in git), so later runs take about a minute. The test set is read only in notebook 05.
 
 ## Files
 
+- `DSA211_G1T7_wine_quality.ipynb`: the single submission notebook (Parts 0-5)
+- `01_data_split.ipynb` … `05_test_and_refit.ipynb` and `wine_utils.py`: the separate working notebooks and shared code
 - `datasets/`: raw UCI files and the train/test split
 - `results/`: the selected model and operating point (JSON), CV and test tables (CSV), figures, `NUMBERS_FOR_SLIDES.md` and `CHANGES.md`
 - `AI_DECLARATION.md`: declaration of AI tool use
