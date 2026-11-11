@@ -14,7 +14,7 @@ The group initially used feature selection with AIC/BIC in the first draft, then
 
 The first draft used StratifiedGroupKFold without dropping the duplicates. The group decided to drop the duplicates and use StratifiedKFold after investigation.
 
-The first draft included an eudit section on the final test set results. This audit was completely dropped in revision v2, as the final test set is purely meant for evaluation of the final model.
+The first draft included an audit section on the final test set results. This audit was completely dropped in revision v2, as the final test set is purely meant for evaluation of the final model.
 
 ### Record of AI-assisted changes in revision v2
 
