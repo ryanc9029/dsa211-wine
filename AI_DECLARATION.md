@@ -1,7 +1,5 @@
 # Declaration of AI tool use
 
-> **DRAFT. To be completed by the group.** Replace every `[TODO: ...]` with your own words. Do not submit statements that do not reflect what you actually did.
-
 ## Tools used
 
 - Claude / Claude Code (Anthropic), used for code assistance and review.
@@ -36,12 +34,16 @@ The group asked Claude Code to check the draft report against the repository. Cl
 
 ## What the group did
 
-[TODO: describe the decisions and work done by group members, for example the research question, choice of application and cost ratio, model selection rule, interpretation of results and the written report.]
+Approve and verify each decision before letting Claude run it, discuss and evaluate the results before deciding if we want to keep or change our analysis method.
 
 ## Verification
 
-[TODO: describe how the group checked AI-assisted code and text, for example re-running notebooks, checking numbers against outputs, and reviewing the statistical reasoning.]
+We ran the notebooks manually, rechecked all numbers, and also evaluated the statistical reasoning for each code segment.
 
 ## Group members
 
-[TODO: names and student IDs]
+Amanda
+Declan
+Felicia
+Jeryl
+Ryan
